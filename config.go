@@ -1,11 +1,10 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"net/url"
 	"os"
-	"slices"
+	"sort"
 	"strings"
 	"unicode"
 
@@ -18,10 +17,13 @@ const (
 )
 
 type Config struct {
-	Server   ServerConfig        `yaml:"server"`
-	YouTube  YouTubeConfig       `yaml:"youtube"`
-	Groups   []GroupConfig       `yaml:"groups"`
-	channels map[string]struct{} `yaml:"-"`
+	Server  ServerConfig  `yaml:"server"`
+	YouTube YouTubeConfig `yaml:"youtube"`
+	Groups  []GroupConfig `yaml:"groups"`
+
+	channels            map[string]struct{} `yaml:"-"`
+	channelIDs          []string            `yaml:"-"`
+	groupNamesByChannel map[string][]string `yaml:"-"`
 }
 
 type ServerConfig struct {
@@ -51,7 +53,7 @@ func LoadConfig() (*Config, error) {
 
 	var config Config
 
-	decoder := yaml.NewDecoder(bytes.NewReader([]byte(expanded)), yaml.DisallowUnknownField())
+	decoder := yaml.NewDecoder(strings.NewReader(expanded), yaml.DisallowUnknownField())
 
 	err = decoder.Decode(&config)
 	if err != nil {
@@ -99,6 +101,8 @@ func (c *Config) prepare() error {
 	}
 
 	c.channels = make(map[string]struct{})
+	c.groupNamesByChannel = make(map[string][]string)
+	c.channelIDs = c.channelIDs[:0]
 
 	groupNames := make(map[string]struct{})
 	groupSlugs := make(map[string]struct{})
@@ -149,22 +153,27 @@ func (c *Config) prepare() error {
 			}
 
 			seen[channelID] = struct{}{}
-			c.channels[channelID] = struct{}{}
+
+			if _, exists := c.channels[channelID]; !exists {
+				c.channels[channelID] = struct{}{}
+
+				c.channelIDs = append(c.channelIDs, channelID)
+			}
+
+			c.groupNamesByChannel[channelID] = append(c.groupNamesByChannel[channelID], group.Name)
+
 			group.Channels[channelIndex] = channelID
 		}
 	}
+
+	sort.Strings(c.channelIDs)
 
 	return nil
 }
 
 func (c *Config) ChannelIDs() []string {
-	channelIDs := make([]string, 0, len(c.channels))
-
-	for channelID := range c.channels {
-		channelIDs = append(channelIDs, channelID)
-	}
-
-	return channelIDs
+	// Prepared configuration is immutable, callers can share this sorted slice.
+	return c.channelIDs
 }
 
 func (c *Config) HasChannel(channelID string) bool {
@@ -184,17 +193,8 @@ func (c *Config) Group(slug string) *GroupConfig {
 }
 
 func (c *Config) GroupNames(channelID string) []string {
-	groups := make([]string, 0, 2)
-
-	for index := range c.Groups {
-		group := &c.Groups[index]
-
-		if slices.Contains(group.Channels, channelID) {
-			groups = append(groups, group.Name)
-		}
-	}
-
-	return groups
+	// Prepared configuration is immutable, feed entries can share this slice.
+	return c.groupNamesByChannel[channelID]
 }
 
 func slugify(value string) string {

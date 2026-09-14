@@ -82,7 +82,6 @@ func (s *Service) Wait() {
 
 func (s *Service) syncConfiguredChannels(ctx context.Context) {
 	channelIDs := cfg.ChannelIDs()
-	sort.Strings(channelIDs)
 
 	for _, channelID := range channelIDs {
 		err := db.EnsureChannel(ctx, channelID)
@@ -132,8 +131,6 @@ func (s *Service) ensureSubscriptions(ctx context.Context, force bool) {
 
 	channelIDs := cfg.ChannelIDs()
 
-	sort.Strings(channelIDs)
-
 	now := time.Now()
 
 	for _, channelID := range channelIDs {
@@ -165,8 +162,6 @@ func (s *Service) ensureSubscriptions(ctx context.Context, force bool) {
 
 func (s *Service) refreshChannelMetadata(ctx context.Context) {
 	channelIDs := cfg.ChannelIDs()
-
-	sort.Strings(channelIDs)
 
 	for start := 0; start < len(channelIDs); start += maxYouTubeBatchSize {
 		end := min(start+maxYouTubeBatchSize, len(channelIDs))
@@ -200,8 +195,6 @@ func (s *Service) refreshChannelMetadata(ctx context.Context) {
 
 func (s *Service) reconcileAll(ctx context.Context) {
 	channelIDs := cfg.ChannelIDs()
-
-	sort.Strings(channelIDs)
 
 	for _, channelID := range channelIDs {
 		if ctx.Err() != nil {

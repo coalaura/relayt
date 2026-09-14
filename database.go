@@ -16,7 +16,13 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-const DatabasePath = "data/database.db"
+const (
+	DatabasePath = "data/database.db"
+
+	listVideosQueryPrefix = `SELECT v.id, v.channel_id, c.title, v.title, v.published_at, v.updated_at, v.kind FROM videos v JOIN channels c ON c.id = v.channel_id WHERE v.channel_id IN (`
+	listVideosKindFilter  = ` AND v.kind = ?`
+	listVideosQuerySuffix = ` ORDER BY v.published_at DESC LIMIT ?`
+)
 
 type Database struct {
 	db *sql.DB
@@ -388,35 +394,45 @@ func (d *Database) ListVideos(ctx context.Context, channelIDs []string, includeS
 		return []VideoRecord{}, nil
 	}
 
-	placeholders := make([]string, len(channelIDs))
-	arguments := make([]any, 0, len(channelIDs)+1)
+	argumentCapacity := len(channelIDs) + 1
+	queryCapacity := len(listVideosQueryPrefix) + len(listVideosQuerySuffix) + len(channelIDs)*2
+
+	if !includeShorts {
+		argumentCapacity++
+		queryCapacity += len(listVideosKindFilter)
+	}
+
+	arguments := make([]any, 0, argumentCapacity)
+
+	var query strings.Builder
+
+	query.Grow(queryCapacity)
+
+	query.WriteString(listVideosQueryPrefix)
 
 	for index, channelID := range channelIDs {
-		placeholders[index] = "?"
+		if index > 0 {
+			query.WriteByte(',')
+		}
+
+		query.WriteByte('?')
+
 		arguments = append(arguments, channelID)
 	}
 
-	query := `SELECT
-		v.id,
-		v.channel_id,
-		c.title,
-		v.title,
-		v.published_at,
-		v.updated_at,
-		v.kind
-	FROM videos v
-	JOIN channels c ON c.id = v.channel_id
-	WHERE v.channel_id IN (` + strings.Join(placeholders, ",") + `)`
+	query.WriteByte(')')
 
 	if !includeShorts {
-		query += ` AND v.kind = ?`
+		query.WriteString(listVideosKindFilter)
+
 		arguments = append(arguments, VideoKindVideo)
 	}
 
-	query += ` ORDER BY v.published_at DESC LIMIT ?`
+	query.WriteString(listVideosQuerySuffix)
+
 	arguments = append(arguments, limit)
 
-	rows, err := d.db.QueryContext(ctx, query, arguments...)
+	rows, err := d.db.QueryContext(ctx, query.String(), arguments...)
 	if err != nil {
 		return nil, fmt.Errorf("list videos: %w", err)
 	}

@@ -127,10 +127,12 @@ func (h *HTTPHandler) GroupVideos(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HTTPHandler) writeFeed(w http.ResponseWriter, videos []VideoRecord) {
-	feedVideos := make([]FeedVideo, 0, len(videos))
+	feedVideos := make([]FeedVideo, len(videos))
 
-	for _, video := range videos {
-		feedVideos = append(feedVideos, FeedVideo{
+	for index := range videos {
+		video := &videos[index]
+
+		feedVideos[index] = FeedVideo{
 			ID:          video.ID,
 			ChannelID:   video.ChannelID,
 			Channel:     video.ChannelTitle,
@@ -141,7 +143,7 @@ func (h *HTTPHandler) writeFeed(w http.ResponseWriter, videos []VideoRecord) {
 			UpdatedAt:   time.Unix(video.UpdatedAt, 0).UTC(),
 			Kind:        video.Kind,
 			Groups:      cfg.GroupNames(video.ChannelID),
-		})
+		}
 	}
 
 	writeJSON(w, http.StatusOK, FeedResponse{Videos: feedVideos})
