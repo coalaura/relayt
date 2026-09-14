@@ -1,0 +1,19 @@
+server:
+  listen: ":5151"
+  public-url: "https://yt.example.com"
+
+youtube:
+  api-key: "youtube-api-key"
+  include-shorts: false
+  subscribe: true
+
+groups:
+  - name: Documentation
+    channels:
+      - UCODHrzPMGbNv67e84WDZhQQ # fern
+      - UCtYKe7-XbaDjpUwcU5x0bLg # neo
+
+  - name: Dev & Programming
+    channels:
+      - UCUyeluBRhGPCW4rPe_UvBZQ # The PrimeTime
+      - UCbRP3c757lWg9M-U7TyEkXA # Theo - t3.gg
