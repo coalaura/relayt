@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="320" viewBox="0 0 1080 320" fill="none" role="img" aria-labelledby="title description">
+  <title id="title">relayt</title>
+  <desc id="description">Three YouTube video channels flow together beneath the relayt wordmark, becoming one ordered feed.</desc>
+  <defs>
+    <!-- A video frame with a transparent play-shaped cutout. -->
+    <path id="video" fill-rule="evenodd" d="M2 0H62Q64 0 64 2V40Q64 42 62 42H2Q0 42 0 40V2Q0 0 2 0ZM26 11V31L44 21Z"/>
+    <style>
+      .ink { stroke: #edf0eb; }
+      .copy { fill: #b6c2c7; }
+      .coral { color: #ff8676; }
+      .teal { color: #78cdbd; }
+      .gold { color: #e9be70; }
+      .channel { stroke: currentColor; stroke-width: 12; stroke-opacity: .46; }
+      .merge { fill: currentColor; fill-opacity: .46; }
+      .frame { fill: currentColor; }
+      .feed { stroke: #b6c2c7; stroke-width: 12; stroke-opacity: .46; }
+    </style>
+  </defs>
+
+  <!-- Each channel has its own approach; the three paths share one exit. -->
+  <g stroke-linecap="butt">
+    <g class="coral">
+      <path class="channel" d="M136 83H174C278 83 249 232 410 232H518"/>
+      <path class="merge" d="M518 226C570 226 578 248 640 248V252C578 252 570 238 518 238Z"/>
+      <use class="frame" href="#video" x="72" y="62"/>
+    </g>
+    <g class="teal">
+      <path class="channel" d="M208 179H238C312 179 311 254 410 254H518"/>
+      <path class="merge" d="M518 248C570 248 578 252 640 252V256C578 256 570 260 518 260Z"/>
+      <use class="frame" href="#video" x="144" y="158"/>
+    </g>
+    <g class="gold">
+      <path class="channel" d="M136 275H238C312 275 336 276 410 276H518"/>
+      <path class="merge" d="M518 270C570 270 578 256 640 256V260C578 260 570 282 518 282Z"/>
+      <use class="frame" href="#video" x="72" y="254"/>
+    </g>
+  </g>
+
+  <!-- Custom monoline lettering keeps the wordmark independent of fonts. -->
+  <g class="ink" transform="translate(385 20) scale(1.15)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 94V40M8 65C8 47 21 36 38 40"/>
+    <path d="M111 87C93 104 56 96 56 68C56 29 114 28 114 64H57"/>
+    <path d="M143 10V78Q143 96 156 94"/>
+    <path d="M231 94V40M231 67C231 29 175 29 175 67C175 105 231 105 231 67"/>
+    <path d="M258 40L284 94M311 40L279 113Q272 129 254 125"/>
+    <path d="M347 16V77Q347 98 368 92M330 40H368"/>
+  </g>
+  <text class="copy" x="596" y="193" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="23">A JSON feed for your YouTube channels</text>
+
+  <!-- Source colors survive the merge, interleaved along a single feed. -->
+  <g>
+    <path class="feed" d="M704 254H736M800 254H832M896 254H928"/>
+    <use class="frame coral" href="#video" x="640" y="233"/>
+    <use class="frame teal" href="#video" x="736" y="233"/>
+    <use class="frame gold" href="#video" x="832" y="233"/>
+    <use class="frame coral" href="#video" x="928" y="233"/>
+  </g>
+</svg>

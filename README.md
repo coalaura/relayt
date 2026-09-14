@@ -1,4 +1,8 @@
-# relayt
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/banner.svg">
+  <source media="(prefers-color-scheme: light)" srcset=".github/banner-light.svg">
+  <img alt="relayt - YouTube channels flowing into one JSON feed" src=".github/banner-light.svg">
+</picture>
 
 A small self-hosted JSON feed for YouTube channels. It groups channels, tracks new uploads through WebSub and periodically reconciles data with the YouTube API.
 
