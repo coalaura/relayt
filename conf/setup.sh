@@ -96,12 +96,12 @@ fi
 echo "Setting permissions..."
 
 chown root:root "${path}" "${conf_dir}" "${path}/${name}" "${conf_dir}/${name}.conf" "${conf_dir}/${name}.service" \
-    "${conf_dir}/${name}_logs.conf" "${conf_dir}/setup.sh" "${conf_dir}/uninstall.sh" "${conf_dir}/svc.yml"
+    "${conf_dir}/${name}_logs.conf" "${conf_dir}/setup.sh" "${conf_dir}/uninstall.sh"
 chmod 0755 "${path}"
 chmod 0755 "${conf_dir}"
 chmod 0755 "${path}/${name}"
 chmod 0644 "${conf_dir}/${name}.conf" "${conf_dir}/${name}.service" "${conf_dir}/${name}_logs.conf"
-chmod 0700 "${conf_dir}/setup.sh" "${conf_dir}/uninstall.sh" "${conf_dir}/svc.yml"
+chmod 0700 "${conf_dir}/setup.sh" "${conf_dir}/uninstall.sh"
 
 install -d -o "${name}" -g "${name}" -m 0750 "${path}/logs"
 install -o "${name}" -g "${name}" -m 0640 /dev/null "${path}/logs/${name}.log"
