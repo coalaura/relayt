@@ -44,6 +44,7 @@ jobs:
         goos:
           - windows
           - linux
+          - darwin
         goarch:
           - amd64
           - arm64
@@ -56,6 +57,7 @@ jobs:
         id: build
         uses: coalaura/build@v1
         with:
+          builder-version: v0.4.4
           os: ${{ matrix.goos }}
           arch: ${{ matrix.goarch }}
           cgo: true
