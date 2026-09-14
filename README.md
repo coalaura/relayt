@@ -44,6 +44,10 @@ groups:
 
 Group names are converted to lowercase URL slugs. The default limit is 50 and the maximum is 200.
 
+## Glance
+
+An example [`custom-api`](https://github.com/glanceapp/glance) widget is available in [`examples/glance`](examples/glance). Copy [`templates/videos.html`](examples/glance/templates/videos.html) into the `templates` directory next to your Glance configuration, add the contents of [`widget.yml`](examples/glance/widget.yml) to a widget column and update its `url` for your relayt instance and group.
+
 ## Build
 
 Building from source requires Go 1.26 and a C compiler for SQLite.

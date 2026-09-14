@@ -1,0 +1,7 @@
+- type: custom-api
+  title: Videos
+  frameless: true
+  cache: 5m
+  url: http://yt.example.com/api/groups/example/videos
+  template: |
+    $include: templates/videos.html
