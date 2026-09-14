@@ -45,5 +45,5 @@ Group names are converted to lowercase URL slugs. The default limit is 50 and th
 Building from source requires Go 1.26 and a C compiler for SQLite.
 
 ```sh
-go build -o youtube-feed .
+go build -o relayt .
 ```

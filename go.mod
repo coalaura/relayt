@@ -1,4 +1,4 @@
-module github.com/coalaura/youtube-feed
+module github.com/coalaura/relayt
 
 go 1.26.0
 
