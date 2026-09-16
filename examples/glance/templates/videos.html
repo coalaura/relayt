@@ -1,13 +1,20 @@
 <div class="carousel-container">
 	<div class="cards-horizontal carousel-items-container">
 		{{ range .JSON.Array "videos" }}
-			<div class="card widget-content-frame thumbnail-parent">
+			<div class="card widget-content-frame thumbnail-parent relative">
 				<img
 					class="video-thumbnail thumbnail"
 					loading="lazy"
 					src="{{ .String "thumbnail" }}"
 					alt=""
 				/>
+
+				{{ if .Bool "memberOnly" }}
+					<span
+						class="color-primary uppercase size-h6"
+						style="position: absolute; top: 0.7rem; right: 0.7rem; z-index: 1; padding: 0.35rem 0.55rem; border: 1px solid color-mix(in srgb, var(--color-primary) 55%, transparent); border-radius: var(--border-radius); background: color-mix(in srgb, var(--color-widget-background) 88%, transparent); backdrop-filter: blur(4px); line-height: 1; letter-spacing: 0.04em;"
+					>Member</span>
+				{{ end }}
 
 				<div class="margin-top-10 margin-bottom-widget flex flex-column grow padding-inline-widget">
 					<a

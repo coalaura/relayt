@@ -22,11 +22,11 @@ const (
 	maxYouTubeBatchSize         = 50
 )
 
-type playlistTimestamp int
+type playlistSource int
 
 const (
-	playlistVideoPublishedAt playlistTimestamp = iota
-	playlistItemAddedAt
+	uploadsPlaylist playlistSource = iota
+	membersPlaylist
 )
 
 type Service struct {
@@ -233,7 +233,7 @@ func (s *Service) reconcileChannel(ctx context.Context, channelID string) error 
 		return fmt.Errorf("uploads playlist is unknown")
 	}
 
-	newVideos, err := s.reconcilePlaylist(ctx, channelID, channel.UploadsPlaylistID, channel.LastReconciledAt, VideoKindUnknown, playlistVideoPublishedAt)
+	newVideos, err := s.reconcilePlaylist(ctx, channelID, channel.UploadsPlaylistID, channel.LastReconciledAt, VideoKindUnknown, uploadsPlaylist)
 	if err != nil {
 		return err
 	}
@@ -244,7 +244,7 @@ func (s *Service) reconcileChannel(ctx context.Context, channelID string) error 
 			return playlistErr
 		}
 
-		memberVideos, reconcileErr := s.reconcilePlaylist(ctx, channelID, playlistID, channel.LastReconciledAt, VideoKindVideo, playlistItemAddedAt)
+		memberVideos, reconcileErr := s.reconcilePlaylist(ctx, channelID, playlistID, channel.LastReconciledAt, VideoKindVideo, membersPlaylist)
 		if reconcileErr == nil {
 			newVideos += memberVideos
 		} else if !errors.Is(reconcileErr, errYouTubePlaylistNotFound) {
@@ -269,7 +269,7 @@ func (s *Service) reconcileChannel(ctx context.Context, channelID string) error 
 	return nil
 }
 
-func (s *Service) reconcilePlaylist(ctx context.Context, channelID string, playlistID string, lastReconciledAt int64, kind VideoKind, timestamp playlistTimestamp) (int, error) {
+func (s *Service) reconcilePlaylist(ctx context.Context, channelID string, playlistID string, lastReconciledAt int64, kind VideoKind, source playlistSource) (int, error) {
 	initialSync := lastReconciledAt == 0
 	pageToken := ""
 	newVideos := 0
@@ -292,7 +292,7 @@ func (s *Service) reconcilePlaylist(ctx context.Context, channelID string, playl
 				return 0, err
 			}
 
-			video := playlistVideoRecord(channelID, item, kind, timestamp)
+			video := playlistVideoRecord(channelID, item, kind, source)
 
 			err = db.UpsertVideo(ctx, video)
 			if err != nil {
@@ -318,11 +318,13 @@ func (s *Service) reconcilePlaylist(ctx context.Context, channelID string, playl
 	return newVideos, nil
 }
 
-func playlistVideoRecord(channelID string, item PlaylistItem, kind VideoKind, timestamp playlistTimestamp) VideoRecord {
+func playlistVideoRecord(channelID string, item PlaylistItem, kind VideoKind, source playlistSource) VideoRecord {
 	publishedAt := item.PublishedAt
+	memberOnly := false
 
-	if timestamp == playlistItemAddedAt {
+	if source == membersPlaylist {
 		publishedAt = item.AddedAt
+		memberOnly = true
 	}
 
 	return VideoRecord{
@@ -332,6 +334,7 @@ func playlistVideoRecord(channelID string, item PlaylistItem, kind VideoKind, ti
 		PublishedAt: publishedAt.Unix(),
 		UpdatedAt:   publishedAt.Unix(),
 		Kind:        kind,
+		MemberOnly:  memberOnly,
 	}
 }
 

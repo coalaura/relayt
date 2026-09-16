@@ -19,7 +19,7 @@ import (
 const (
 	DatabasePath = "data/database.db"
 
-	listVideosQueryPrefix = `SELECT v.id, v.channel_id, c.title, v.title, v.published_at, v.updated_at, v.kind FROM videos v JOIN channels c ON c.id = v.channel_id WHERE v.channel_id IN (`
+	listVideosQueryPrefix = `SELECT v.id, v.channel_id, c.title, v.title, v.published_at, v.updated_at, v.kind, v.member_only FROM videos v JOIN channels c ON c.id = v.channel_id WHERE v.channel_id IN (`
 	listVideosKindFilter  = ` AND v.kind = ?`
 	listVideosQuerySuffix = ` ORDER BY v.published_at DESC LIMIT ?`
 )
@@ -261,19 +261,21 @@ func (d *Database) UpsertVideo(ctx context.Context, video VideoRecord) error {
 
 	_, err := d.db.ExecContext(
 		ctx,
-		`INSERT INTO videos (id, channel_id, title, published_at, updated_at, kind)
-		VALUES (?, ?, ?, ?, ?, ?)
+		`INSERT INTO videos (id, channel_id, title, published_at, updated_at, kind, member_only)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(id) DO UPDATE SET
 			channel_id = excluded.channel_id,
 			title = excluded.title,
 			published_at = excluded.published_at,
-			updated_at = excluded.updated_at`,
+			updated_at = excluded.updated_at,
+			member_only = excluded.member_only`,
 		video.ID,
 		video.ChannelID,
 		video.Title,
 		video.PublishedAt,
 		video.UpdatedAt,
 		kind,
+		video.MemberOnly,
 	)
 
 	if err != nil {
@@ -452,6 +454,7 @@ func (d *Database) ListVideos(ctx context.Context, channelIDs []string, includeS
 			&video.PublishedAt,
 			&video.UpdatedAt,
 			&video.Kind,
+			&video.MemberOnly,
 		)
 
 		if err != nil {
@@ -532,6 +535,8 @@ func ApplySchema(database *sql.DB) error {
 	table.Column("published_at", "INTEGER").NotNull()
 	table.Column("updated_at", "INTEGER").NotNull()
 	table.Column("kind", "TEXT").NotNull().Default(string(VideoKindUnknown))
+	table.Column("member_only", "INTEGER").NotNull().Default("0")
+
 	table.Index("idx_videos_published_at", "published_at")
 	table.Index("idx_videos_channel_published_at", "channel_id", "published_at")
 	table.Index("idx_videos_kind", "kind")

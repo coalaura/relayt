@@ -37,6 +37,7 @@ type FeedVideo struct {
 	PublishedAt time.Time `json:"publishedAt"`
 	UpdatedAt   time.Time `json:"updatedAt"`
 	Kind        VideoKind `json:"kind"`
+	MemberOnly  bool      `json:"memberOnly"`
 	Groups      []string  `json:"groups"`
 }
 
@@ -142,6 +143,7 @@ func (h *HTTPHandler) writeFeed(w http.ResponseWriter, videos []VideoRecord) {
 			PublishedAt: time.Unix(video.PublishedAt, 0).UTC(),
 			UpdatedAt:   time.Unix(video.UpdatedAt, 0).UTC(),
 			Kind:        video.Kind,
+			MemberOnly:  video.MemberOnly,
 			Groups:      cfg.GroupNames(video.ChannelID),
 		}
 	}

@@ -28,6 +28,7 @@ type VideoRecord struct {
 	PublishedAt  int64
 	UpdatedAt    int64
 	Kind         VideoKind
+	MemberOnly   bool
 }
 
 type ChannelMetadata struct {
