@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -225,59 +226,23 @@ func (s *Service) reconcileChannel(ctx context.Context, channelID string) error 
 		return fmt.Errorf("uploads playlist is unknown")
 	}
 
-	initialSync := channel.LastReconciledAt == 0
+	newVideos, err := s.reconcilePlaylist(ctx, channelID, channel.UploadsPlaylistID, channel.LastReconciledAt, VideoKindUnknown)
+	if err != nil {
+		return err
+	}
 
-	var (
-		pageToken string
-		newVideos int
-	)
-
-	for {
-		page, err := s.youtube.PlaylistItems(ctx, channel.UploadsPlaylistID, pageToken)
-		if err != nil {
-			return err
+	if cfg.YouTube.IncludeMemberVideos {
+		playlistID, playlistErr := membersPlaylistID(channelID)
+		if playlistErr != nil {
+			return playlistErr
 		}
 
-		foundReconciliationBoundary := false
-
-		for _, item := range page.Items {
-			if item.VideoID == "" {
-				continue
-			}
-
-			existed, err := db.VideoExists(ctx, item.VideoID)
-			if err != nil {
-				return err
-			}
-
-			video := VideoRecord{
-				ID:          item.VideoID,
-				ChannelID:   channelID,
-				Title:       item.Title,
-				PublishedAt: item.PublishedAt.Unix(),
-				UpdatedAt:   item.PublishedAt.Unix(),
-				Kind:        VideoKindUnknown,
-			}
-
-			err = db.UpsertVideo(ctx, video)
-			if err != nil {
-				return err
-			}
-
-			if !initialSync && item.AddedAt.Unix() <= channel.LastReconciledAt {
-				foundReconciliationBoundary = true
-			}
-
-			if !existed {
-				newVideos++
-			}
+		memberVideos, reconcileErr := s.reconcilePlaylist(ctx, channelID, playlistID, channel.LastReconciledAt, VideoKindVideo)
+		if reconcileErr == nil {
+			newVideos += memberVideos
+		} else if !errors.Is(reconcileErr, errYouTubePlaylistNotFound) {
+			log.Warnf("reconcile member videos for %s: %v\n", channelID, reconcileErr)
 		}
-
-		if initialSync || foundReconciliationBoundary || page.NextPageToken == "" {
-			break
-		}
-
-		pageToken = page.NextPageToken
 	}
 
 	err = db.SetLastReconciled(ctx, channelID, time.Now())
@@ -295,6 +260,62 @@ func (s *Service) reconcileChannel(ctx context.Context, channelID string) error 
 	}
 
 	return nil
+}
+
+func (s *Service) reconcilePlaylist(ctx context.Context, channelID string, playlistID string, lastReconciledAt int64, kind VideoKind) (int, error) {
+	initialSync := lastReconciledAt == 0
+	pageToken := ""
+	newVideos := 0
+
+	for {
+		page, err := s.youtube.PlaylistItems(ctx, playlistID, pageToken)
+		if err != nil {
+			return 0, err
+		}
+
+		foundReconciliationBoundary := false
+
+		for _, item := range page.Items {
+			if item.VideoID == "" {
+				continue
+			}
+
+			existed, err := db.VideoExists(ctx, item.VideoID)
+			if err != nil {
+				return 0, err
+			}
+
+			video := VideoRecord{
+				ID:          item.VideoID,
+				ChannelID:   channelID,
+				Title:       item.Title,
+				PublishedAt: item.PublishedAt.Unix(),
+				UpdatedAt:   item.PublishedAt.Unix(),
+				Kind:        kind,
+			}
+
+			err = db.UpsertVideo(ctx, video)
+			if err != nil {
+				return 0, err
+			}
+
+			if !initialSync && item.AddedAt.Unix() <= lastReconciledAt {
+				foundReconciliationBoundary = true
+			}
+
+			if !existed {
+				newVideos++
+			}
+		}
+
+		if initialSync || foundReconciliationBoundary || page.NextPageToken == "" {
+			break
+		}
+
+		pageToken = page.NextPageToken
+	}
+
+	return newVideos, nil
 }
 
 func (s *Service) queuePendingChannels(ctx context.Context) {

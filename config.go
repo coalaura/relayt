@@ -32,9 +32,10 @@ type ServerConfig struct {
 }
 
 type YouTubeConfig struct {
-	APIKey        string `yaml:"api-key"`
-	IncludeShorts bool   `yaml:"include-shorts"`
-	Subscribe     bool   `yaml:"subscribe"`
+	APIKey              string `yaml:"api-key"`
+	IncludeShorts       bool   `yaml:"include-shorts"`
+	IncludeMemberVideos bool   `yaml:"include-member-videos"`
+	Subscribe           bool   `yaml:"subscribe"`
 }
 
 type GroupConfig struct {

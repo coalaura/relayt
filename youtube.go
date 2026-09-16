@@ -309,11 +309,19 @@ func (c *YouTubeClient) getJSON(ctx context.Context, path string, query url.Valu
 }
 
 func shortsPlaylistID(channelID string) (string, error) {
+	return derivedPlaylistID(channelID, "UUSH")
+}
+
+func membersPlaylistID(channelID string) (string, error) {
+	return derivedPlaylistID(channelID, "UUMF")
+}
+
+func derivedPlaylistID(channelID, prefix string) (string, error) {
 	if len(channelID) <= 2 || !strings.HasPrefix(channelID, "UC") {
 		return "", fmt.Errorf("invalid youtube channel id %q", channelID)
 	}
 
-	return "UUSH" + channelID[2:], nil
+	return prefix + channelID[2:], nil
 }
 
 func isRetryableYouTubeStatus(status int) bool {

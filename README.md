@@ -24,6 +24,7 @@ server:
 youtube:
   api-key: "${YOUTUBE_API_KEY}"
   include-shorts: false
+  include-member-videos: false
   subscribe: true
 
 groups:
@@ -33,6 +34,8 @@ groups:
 ```
 
 `public-url` must be externally reachable when `subscribe` is enabled. Environment variables in `config.yml` are expanded at startup.
+
+`include-member-videos` adds long-form members-only uploads from YouTube's derived members playlist when it is available. YouTube does not officially document this playlist, so failures are logged without interrupting public video updates.
 
 ## API
 

@@ -5,6 +5,7 @@ server:
 youtube:
   api-key: "youtube-api-key"
   include-shorts: false
+  include-member-videos: false
   subscribe: true
 
 groups:
