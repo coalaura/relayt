@@ -57,6 +57,7 @@ func (c *WebSubClient) request(ctx context.Context, mode, channelID, secret stri
 	form.Set("hub.callback", c.CallbackURL(channelID, secret))
 	form.Set("hub.mode", mode)
 	form.Set("hub.topic", c.TopicURL(channelID))
+	form.Set("hub.verify", "async")
 	form.Set("hub.secret", secret)
 
 	encodedForm := form.Encode()

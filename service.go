@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	reconciliationInterval      = 24 * time.Hour
+	reconciliationInterval      = time.Hour
 	subscriptionCheckInterval   = time.Hour
 	subscriptionRenewalFraction = 0.75
 	classificationBatchDelay    = 2 * time.Second
@@ -65,10 +65,11 @@ func (s *Service) Start(ctx context.Context) {
 
 	go s.classificationLoop(ctx)
 
-	s.syncConfiguredChannels(ctx)
-	s.ensureSubscriptions(ctx, true)
+	s.ensureConfiguredChannels(ctx)
 	s.refreshChannelMetadata(ctx)
 	s.reconcileAll(ctx)
+
+	log.Println("initial reconciliation finished")
 
 	s.waitGroup.Add(2)
 
@@ -80,7 +81,7 @@ func (s *Service) Wait() {
 	s.waitGroup.Wait()
 }
 
-func (s *Service) syncConfiguredChannels(ctx context.Context) {
+func (s *Service) ensureConfiguredChannels(ctx context.Context) {
 	channelIDs := cfg.ChannelIDs()
 
 	for _, channelID := range channelIDs {
@@ -89,7 +90,9 @@ func (s *Service) syncConfiguredChannels(ctx context.Context) {
 			log.Errorf("ensure channel %s: %v\n", channelID, err)
 		}
 	}
+}
 
+func (s *Service) cleanupRemovedChannels(ctx context.Context) {
 	channels, err := db.Channels(ctx)
 	if err != nil {
 		log.Errorf("load stored channels: %v\n", err)
@@ -124,7 +127,7 @@ func (s *Service) syncConfiguredChannels(ctx context.Context) {
 	}
 }
 
-func (s *Service) ensureSubscriptions(ctx context.Context, force bool) {
+func (s *Service) ensureSubscriptions(ctx context.Context) {
 	if !cfg.YouTube.Subscribe {
 		return
 	}
@@ -145,7 +148,7 @@ func (s *Service) ensureSubscriptions(ctx context.Context, force bool) {
 			continue
 		}
 
-		if !force && !subscriptionNeedsRenewal(channel, now) {
+		if !subscriptionNeedsRenewal(channel, now) {
 			continue
 		}
 
@@ -414,6 +417,10 @@ func (s *Service) classifyPendingChannel(ctx context.Context, channelID string) 
 func (s *Service) subscriptionLoop(ctx context.Context) {
 	defer s.waitGroup.Done()
 
+	s.cleanupRemovedChannels(ctx)
+	s.ensureSubscriptions(ctx)
+	s.queuePendingChannels(ctx)
+
 	ticker := time.NewTicker(subscriptionCheckInterval)
 	defer ticker.Stop()
 
@@ -422,7 +429,8 @@ func (s *Service) subscriptionLoop(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			s.ensureSubscriptions(ctx, false)
+			s.cleanupRemovedChannels(ctx)
+			s.ensureSubscriptions(ctx)
 			s.queuePendingChannels(ctx)
 		}
 	}
