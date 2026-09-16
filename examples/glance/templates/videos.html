@@ -1,20 +1,13 @@
 <div class="carousel-container">
 	<div class="cards-horizontal carousel-items-container">
 		{{ range .JSON.Array "videos" }}
-			<div class="card widget-content-frame thumbnail-parent relative">
+			<div class="card widget-content-frame thumbnail-parent">
 				<img
 					class="video-thumbnail thumbnail"
 					loading="lazy"
 					src="{{ .String "thumbnail" }}"
 					alt=""
 				/>
-
-				{{ if .Bool "memberOnly" }}
-					<span
-						class="uppercase size-h6"
-						style="position: absolute; top: 0.7rem; right: 0.7rem; z-index: 1; padding: 0.15rem 0.4rem; border: 2px solid var(--color-widget-background); border-radius: var(--border-radius); background: var(--color-primary); color: var(--color-widget-background); line-height: 1.2;"
-					>Member</span>
-				{{ end }}
 
 				<div class="margin-top-10 margin-bottom-widget flex flex-column grow padding-inline-widget">
 					<a
@@ -25,10 +18,32 @@
 					>{{ .String "title" }}</a>
 
 					<ul class="list-horizontal-text flex-nowrap margin-top-7">
-						<li
-							class="shrink-0"
-							{{ .String "publishedAt" | parseRelativeTime "rfc3339" }}
-						></li>
+						<li class="flex items-center gap-5 shrink-0">
+							{{ if .Bool "memberOnly" }}
+								<span
+									class="color-positive cursor-help"
+									data-popover-type="text"
+									data-popover-position="above"
+									data-popover-text="Members only"
+									aria-label="Members only"
+								>
+									<svg
+										aria-hidden="true"
+										width="12"
+										height="12"
+										viewBox="0 0 16 16"
+										style="display: block;"
+									>
+										<circle cx="8" cy="8" r="7" fill="currentColor" />
+										<path d="M8 2.4c.6 3.3 1.7 4.4 5 5-3.3.6-4.4 1.7-5 5-.6-3.3-1.7-4.4-5-5 3.3-.6 4.4-1.7 5-5Z" fill="var(--color-widget-background)" />
+									</svg>
+								</span>
+							{{ end }}
+
+							<span
+								{{ .String "publishedAt" | parseRelativeTime "rfc3339" }}
+							></span>
+						</li>
 
 						<li class="min-width-0">
 							<a
