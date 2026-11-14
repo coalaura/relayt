@@ -67,6 +67,26 @@ type youtubePlaylistItemContentDetails struct {
 	VideoPublishedAt string `json:"videoPublishedAt"`
 }
 
+type youtubeVideoListResponse struct {
+	Items []youtubeVideo `json:"items"`
+}
+
+type youtubeVideo struct {
+	ID                   string                       `json:"id"`
+	Snippet              youtubeVideoSnippet          `json:"snippet"`
+	LiveStreamingDetails *youtubeLiveStreamingDetails `json:"liveStreamingDetails"`
+}
+
+type youtubeVideoSnippet struct {
+	LiveBroadcastContent string `json:"liveBroadcastContent"`
+}
+
+type youtubeLiveStreamingDetails struct {
+	ScheduledStartTime string `json:"scheduledStartTime"`
+	ActualStartTime    string `json:"actualStartTime"`
+	ActualEndTime      string `json:"actualEndTime"`
+}
+
 type youtubeErrorResponse struct {
 	Error youtubeError `json:"error"`
 }
@@ -171,6 +191,34 @@ func (c *YouTubeClient) PlaylistItems(ctx context.Context, playlistID, pageToken
 	}
 
 	return page, nil
+}
+
+func (c *YouTubeClient) VideoLivestreams(ctx context.Context, videoIDs []string) (map[string]bool, error) {
+	livestreams := make(map[string]bool, len(videoIDs))
+
+	if len(videoIDs) == 0 {
+		return livestreams, nil
+	}
+
+	query := url.Values{}
+
+	query.Set("part", "snippet,liveStreamingDetails")
+	query.Set("id", strings.Join(videoIDs, ","))
+	query.Set("fields", "items(id,snippet/liveBroadcastContent,liveStreamingDetails(scheduledStartTime,actualStartTime,actualEndTime))")
+
+	var response youtubeVideoListResponse
+
+	err := c.getJSON(ctx, "/videos", query, &response)
+	if err != nil {
+		return nil, fmt.Errorf("load video livestream metadata: %w", err)
+	}
+
+	for _, video := range response.Items {
+		broadcast := video.Snippet.LiveBroadcastContent
+		livestreams[video.ID] = video.LiveStreamingDetails != nil || broadcast == "live" || broadcast == "upcoming"
+	}
+
+	return livestreams, nil
 }
 
 func (c *YouTubeClient) ShortsSince(ctx context.Context, channelID string, since time.Time) (map[string]struct{}, error) {

@@ -80,6 +80,7 @@ func (h *HTTPHandler) Videos(w http.ResponseWriter, r *http.Request) {
 		r.Context(),
 		cfg.ChannelIDs(),
 		cfg.YouTube.IncludeShorts,
+		cfg.YouTube.IncludeLive,
 		limit,
 	)
 
@@ -113,6 +114,7 @@ func (h *HTTPHandler) GroupVideos(w http.ResponseWriter, r *http.Request) {
 		r.Context(),
 		group.Channels,
 		cfg.YouTube.IncludeShorts,
+		cfg.YouTube.IncludeLive,
 		limit,
 	)
 

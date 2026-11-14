@@ -17,10 +17,11 @@ import (
 )
 
 const (
-	DatabasePath = "data/database.db"
+	DatabasePath               = "data/database.db"
+	videoClassificationVersion = 1
 
 	listVideosQueryPrefix = `SELECT v.id, v.channel_id, c.title, v.title, v.published_at, v.updated_at, v.kind, v.member_only FROM videos v JOIN channels c ON c.id = v.channel_id WHERE v.channel_id IN (`
-	listVideosKindFilter  = ` AND v.kind = ?`
+	listVideosKindFilter  = ` AND v.kind IN (?`
 	listVideosQuerySuffix = ` ORDER BY v.published_at DESC LIMIT ?`
 )
 
@@ -290,10 +291,10 @@ func (d *Database) PendingVideos(ctx context.Context, channelID string) ([]Pendi
 		ctx,
 		`SELECT id, published_at
 		FROM videos
-		WHERE channel_id = ? AND kind = ?
+		WHERE channel_id = ? AND classification_version < ?
 		ORDER BY published_at ASC`,
 		channelID,
-		VideoKindUnknown,
+		videoClassificationVersion,
 	)
 
 	if err != nil {
@@ -326,8 +327,8 @@ func (d *Database) PendingVideos(ctx context.Context, channelID string) ([]Pendi
 func (d *Database) PendingClassificationChannels(ctx context.Context) ([]string, error) {
 	rows, err := d.db.QueryContext(
 		ctx,
-		`SELECT DISTINCT channel_id FROM videos WHERE kind = ?`,
-		VideoKindUnknown,
+		`SELECT DISTINCT channel_id FROM videos WHERE classification_version < ?`,
+		videoClassificationVersion,
 	)
 
 	if err != nil {
@@ -369,7 +370,7 @@ func (d *Database) UpdateVideoKinds(ctx context.Context, updates []VideoKindUpda
 
 	defer transaction.Rollback()
 
-	statement, err := transaction.PrepareContext(ctx, `UPDATE videos SET kind = ? WHERE id = ?`)
+	statement, err := transaction.PrepareContext(ctx, `UPDATE videos SET kind = ?, classification_version = ? WHERE id = ?`)
 	if err != nil {
 		return fmt.Errorf("prepare video classification update: %w", err)
 	}
@@ -377,7 +378,7 @@ func (d *Database) UpdateVideoKinds(ctx context.Context, updates []VideoKindUpda
 	defer statement.Close()
 
 	for _, update := range updates {
-		_, err = statement.ExecContext(ctx, update.Kind, update.VideoID)
+		_, err = statement.ExecContext(ctx, update.Kind, videoClassificationVersion, update.VideoID)
 		if err != nil {
 			return fmt.Errorf("update video %s kind: %w", update.VideoID, err)
 		}
@@ -391,17 +392,28 @@ func (d *Database) UpdateVideoKinds(ctx context.Context, updates []VideoKindUpda
 	return nil
 }
 
-func (d *Database) ListVideos(ctx context.Context, channelIDs []string, includeShorts bool, limit int) ([]VideoRecord, error) {
+func (d *Database) ListVideos(ctx context.Context, channelIDs []string, includeShorts, includeLive bool, limit int) ([]VideoRecord, error) {
 	if len(channelIDs) == 0 {
 		return []VideoRecord{}, nil
 	}
 
 	argumentCapacity := len(channelIDs) + 1
 	queryCapacity := len(listVideosQueryPrefix) + len(listVideosQuerySuffix) + len(channelIDs)*2
+	filterKinds := !includeShorts || !includeLive
 
-	if !includeShorts {
-		argumentCapacity++
-		queryCapacity += len(listVideosKindFilter)
+	if filterKinds {
+		kindCount := 1
+
+		if includeShorts {
+			kindCount++
+		}
+
+		if includeLive {
+			kindCount++
+		}
+
+		argumentCapacity += kindCount
+		queryCapacity += len(listVideosKindFilter) + (kindCount-1)*2 + 1
 	}
 
 	arguments := make([]any, 0, argumentCapacity)
@@ -424,10 +436,24 @@ func (d *Database) ListVideos(ctx context.Context, channelIDs []string, includeS
 
 	query.WriteByte(')')
 
-	if !includeShorts {
+	if filterKinds {
 		query.WriteString(listVideosKindFilter)
 
 		arguments = append(arguments, VideoKindVideo)
+
+		if includeShorts {
+			query.WriteString(",?")
+
+			arguments = append(arguments, VideoKindShort)
+		}
+
+		if includeLive {
+			query.WriteString(",?")
+
+			arguments = append(arguments, VideoKindLive)
+		}
+
+		query.WriteByte(')')
 	}
 
 	query.WriteString(listVideosQuerySuffix)
@@ -535,11 +561,13 @@ func ApplySchema(database *sql.DB) error {
 	table.Column("published_at", "INTEGER").NotNull()
 	table.Column("updated_at", "INTEGER").NotNull()
 	table.Column("kind", "TEXT").NotNull().Default(string(VideoKindUnknown))
+	table.Column("classification_version", "INTEGER").NotNull().Default("0")
 	table.Column("member_only", "INTEGER").NotNull().Default("0")
 
 	table.Index("idx_videos_published_at", "published_at")
 	table.Index("idx_videos_channel_published_at", "channel_id", "published_at")
 	table.Index("idx_videos_kind", "kind")
+	table.Index("idx_videos_classification_version", "classification_version")
 
 	err = schema.Apply()
 	if err != nil {

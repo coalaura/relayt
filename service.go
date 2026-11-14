@@ -271,8 +271,11 @@ func (s *Service) reconcileChannel(ctx context.Context, channelID string) error 
 
 func (s *Service) reconcilePlaylist(ctx context.Context, channelID string, playlistID string, lastReconciledAt int64, kind VideoKind, source playlistSource) (int, error) {
 	initialSync := lastReconciledAt == 0
-	pageToken := ""
-	newVideos := 0
+
+	var (
+		pageToken string
+		newVideos int
+	)
 
 	for {
 		page, err := s.youtube.PlaylistItems(ctx, playlistID, pageToken)
@@ -428,29 +431,65 @@ func (s *Service) classifyPendingChannel(ctx context.Context, channelID string) 
 		return err
 	}
 
-	updates := make([]VideoKindUpdate, 0, len(pending))
-	shortCount := 0
+	batchSize := min(maxYouTubeBatchSize, len(pending))
+	videoIDs := make([]string, 0, batchSize)
+	updates := make([]VideoKindUpdate, 0, batchSize)
 
-	for _, video := range pending {
-		kind := VideoKindVideo
+	var (
+		classifiedCount int
+		shortCount      int
+		liveCount       int
+	)
 
-		if _, exists := shorts[video.ID]; exists {
-			kind = VideoKindShort
-			shortCount++
+	for start := 0; start < len(pending); start += maxYouTubeBatchSize {
+		end := min(start+maxYouTubeBatchSize, len(pending))
+		batch := pending[start:end]
+
+		// Reuse the request and update buffers across API batches.
+		videoIDs = videoIDs[:0]
+		updates = updates[:0]
+
+		for _, video := range batch {
+			videoIDs = append(videoIDs, video.ID)
 		}
 
-		updates = append(updates, VideoKindUpdate{
-			VideoID: video.ID,
-			Kind:    kind,
-		})
+		livestreams, metadataErr := s.youtube.VideoLivestreams(ctx, videoIDs)
+		if metadataErr != nil {
+			return metadataErr
+		}
+
+		for _, video := range batch {
+			live, exists := livestreams[video.ID]
+			if !exists {
+				// Omitted videos may become accessible later; keep their classification pending.
+				continue
+			}
+
+			kind := VideoKindVideo
+
+			if live {
+				kind = VideoKindLive
+				liveCount++
+			} else if _, exists := shorts[video.ID]; exists {
+				kind = VideoKindShort
+				shortCount++
+			}
+
+			updates = append(updates, VideoKindUpdate{
+				VideoID: video.ID,
+				Kind:    kind,
+			})
+		}
+
+		err = db.UpdateVideoKinds(ctx, updates)
+		if err != nil {
+			return err
+		}
+
+		classifiedCount += len(updates)
 	}
 
-	err = db.UpdateVideoKinds(ctx, updates)
-	if err != nil {
-		return err
-	}
-
-	log.Printf("classified %s: %d videos, %d shorts\n", channelID, len(pending)-shortCount, shortCount)
+	log.Printf("classified %s: %d videos, %d shorts, %d livestreams\n", channelID, classifiedCount-shortCount-liveCount, shortCount, liveCount)
 
 	return nil
 }

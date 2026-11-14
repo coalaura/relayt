@@ -34,6 +34,7 @@ type ServerConfig struct {
 type YouTubeConfig struct {
 	APIKey              string `yaml:"api-key"`
 	IncludeShorts       bool   `yaml:"include-shorts"`
+	IncludeLive         bool   `yaml:"include-live"`
 	IncludeMemberVideos bool   `yaml:"include-member-videos"`
 	Subscribe           bool   `yaml:"subscribe"`
 }

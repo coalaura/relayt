@@ -8,6 +8,7 @@ const (
 	VideoKindUnknown VideoKind = "unknown"
 	VideoKindVideo   VideoKind = "video"
 	VideoKindShort   VideoKind = "short"
+	VideoKindLive    VideoKind = "live"
 )
 
 type ChannelRecord struct {

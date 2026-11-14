@@ -24,6 +24,7 @@ server:
 youtube:
   api-key: "${YOUTUBE_API_KEY}"
   include-shorts: false
+  include-live: false
   include-member-videos: false
   subscribe: true
 
@@ -34,6 +35,8 @@ groups:
 ```
 
 `public-url` must be externally reachable when `subscribe` is enabled. Environment variables in `config.yml` are expanded at startup.
+
+`include-live` controls whether planned, active, and past livestreams appear in feeds. It defaults to `false`; livestreams are still fetched, classified, and stored.
 
 `include-member-videos` adds long-form members-only uploads from YouTube's derived members playlist when it is available. YouTube does not officially document this playlist, so failures are logged without interrupting public video updates.
 
@@ -46,6 +49,8 @@ groups:
 | `GET /api/groups/{group}/videos?limit=50` | Videos from one group |
 
 Group names are converted to lowercase URL slugs. The default limit is 50 and the maximum is 200.
+
+Each video's `kind` is `video`, `short` or `live`. Planned, active, and past livestreams all use `live`. Shorts and livestreams are included independently using `include-shorts` and `include-live`. Videos awaiting classification may have `kind: "unknown"` when both are enabled; otherwise they are omitted until classified.
 
 Each video includes a `memberOnly` boolean. It is `true` for videos discovered through the members-only playlist and `false` for normal uploads.
 
